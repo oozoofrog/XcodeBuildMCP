@@ -78,10 +78,13 @@ const buildSimulatorSchema = baseSchema
 
 export type BuildSimulatorParams = z.infer<typeof buildSimulatorSchema>;
 
+export type XcbeautifyQuietLevel = 0 | 1 | 2;
+
 // Internal logic for building Simulator apps.
 async function _handleSimulatorBuildLogic(
   params: BuildSimulatorParams,
   executor: CommandExecutor = getDefaultCommandExecutor(),
+  xcbeautifyQuietLevel: XcbeautifyQuietLevel = 0,
 ): Promise<ToolResponse> {
   const projectType = params.projectPath ? 'project' : 'workspace';
   const filePath = params.projectPath ?? params.workspacePath;
@@ -114,6 +117,7 @@ async function _handleSimulatorBuildLogic(
       simulatorId: params.simulatorId,
       useLatestOS: params.simulatorId ? false : params.useLatestOS, // Ignore useLatestOS with ID
       logPrefix: 'iOS Simulator Build',
+      xcbeautify: { quietLevel: xcbeautifyQuietLevel },
     },
     params.preferXcodebuild ?? false,
     'build',
@@ -124,6 +128,7 @@ async function _handleSimulatorBuildLogic(
 export async function build_simLogic(
   params: BuildSimulatorParams,
   executor: CommandExecutor,
+  xcbeautifyQuietLevel: XcbeautifyQuietLevel = 0,
 ): Promise<ToolResponse> {
   // Provide defaults
   const processedParams: BuildSimulatorParams = {
@@ -133,7 +138,7 @@ export async function build_simLogic(
     preferXcodebuild: params.preferXcodebuild ?? false,
   };
 
-  return _handleSimulatorBuildLogic(processedParams, executor);
+  return _handleSimulatorBuildLogic(processedParams, executor, xcbeautifyQuietLevel);
 }
 
 // Public schema = internal minus session-managed fields
@@ -147,22 +152,38 @@ const publicSchemaObject = baseSchemaObject.omit({
   useLatestOS: true,
 } as const);
 
-export default {
-  name: 'build_sim',
-  description: 'Builds an app for an iOS simulator.',
-  schema: publicSchemaObject.shape, // MCP SDK compatibility (public inputs only)
-  handler: createSessionAwareTool<BuildSimulatorParams>({
-    internalSchema: buildSimulatorSchema as unknown as z.ZodType<BuildSimulatorParams>,
-    logicFunction: build_simLogic,
-    getExecutor: getDefaultCommandExecutor,
-    requirements: [
-      { allOf: ['scheme'], message: 'scheme is required' },
-      { oneOf: ['projectPath', 'workspacePath'], message: 'Provide a project or workspace' },
-      { oneOf: ['simulatorId', 'simulatorName'], message: 'Provide simulatorId or simulatorName' },
-    ],
-    exclusivePairs: [
-      ['projectPath', 'workspacePath'],
-      ['simulatorId', 'simulatorName'],
-    ],
-  }),
-};
+export function createBuildSimToolDefinition(
+  name: string,
+  description: string,
+  xcbeautifyQuietLevel: XcbeautifyQuietLevel,
+) {
+  return {
+    name,
+    description,
+    schema: publicSchemaObject.shape, // MCP SDK compatibility (public inputs only)
+    handler: createSessionAwareTool<BuildSimulatorParams>({
+      internalSchema: buildSimulatorSchema as unknown as z.ZodType<BuildSimulatorParams>,
+      logicFunction: (params: BuildSimulatorParams, executor: CommandExecutor) =>
+        build_simLogic(params, executor, xcbeautifyQuietLevel),
+      getExecutor: getDefaultCommandExecutor,
+      requirements: [
+        { allOf: ['scheme'], message: 'scheme is required' },
+        { oneOf: ['projectPath', 'workspacePath'], message: 'Provide a project or workspace' },
+        {
+          oneOf: ['simulatorId', 'simulatorName'],
+          message: 'Provide simulatorId or simulatorName',
+        },
+      ],
+      exclusivePairs: [
+        ['projectPath', 'workspacePath'],
+        ['simulatorId', 'simulatorName'],
+      ],
+    }),
+  };
+}
+
+export default createBuildSimToolDefinition(
+  'build_sim',
+  'Builds an app for an iOS simulator.',
+  0,
+);

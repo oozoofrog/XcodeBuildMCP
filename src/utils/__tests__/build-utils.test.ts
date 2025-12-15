@@ -2,9 +2,15 @@
  * Tests for build-utils Sentry classification logic
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { createMockExecutor } from '../../test-utils/mock-executors.ts';
-import { executeXcodeBuildCommand } from '../build-utils.ts';
+import {
+  executeXcodeBuildCommand,
+  getXcbeautifyArgs,
+  getXcbeautifyInstallPrompt,
+  isXcbeautifyAvailable,
+  resetXcbeautifyCache,
+} from '../build-utils.ts';
 import { XcodePlatform } from '../xcode.ts';
 
 describe('build-utils Sentry Classification', () => {
@@ -258,6 +264,122 @@ describe('build-utils Sentry Classification', () => {
 
       expect(result.isError).toBe(true);
       expect(result.content[0].text).toContain('❌ [stderr] Some error without exit code');
+    });
+  });
+});
+
+describe('xcbeautify utilities', () => {
+  describe('getXcbeautifyArgs', () => {
+    it('should return ["xcbeautify"] for quietLevel 0', () => {
+      expect(getXcbeautifyArgs(0)).toEqual(['xcbeautify']);
+    });
+
+    it('should return ["xcbeautify", "-q"] for quietLevel 1', () => {
+      expect(getXcbeautifyArgs(1)).toEqual(['xcbeautify', '-q']);
+    });
+
+    it('should return ["xcbeautify", "-qq"] for quietLevel 2', () => {
+      expect(getXcbeautifyArgs(2)).toEqual(['xcbeautify', '-qq']);
+    });
+  });
+
+  describe('getXcbeautifyInstallPrompt', () => {
+    it('should return installation prompt containing xcbeautify', () => {
+      const prompt = getXcbeautifyInstallPrompt();
+      expect(prompt).toContain('xcbeautify');
+    });
+
+    it('should include brew install command', () => {
+      const prompt = getXcbeautifyInstallPrompt();
+      expect(prompt).toContain('brew install xcbeautify');
+    });
+
+    it('should include GitHub URL', () => {
+      const prompt = getXcbeautifyInstallPrompt();
+      expect(prompt).toContain('https://github.com/cpisciotta/xcbeautify');
+    });
+  });
+
+  describe('isXcbeautifyAvailable', () => {
+    beforeEach(() => {
+      resetXcbeautifyCache();
+    });
+
+    it('should return true when xcbeautify command succeeds', async () => {
+      const mockExecutor = createMockExecutor({
+        success: true,
+        output: '',
+      });
+
+      const result = await isXcbeautifyAvailable(mockExecutor);
+      expect(result).toBe(true);
+    });
+
+    it('should return false when xcbeautify command fails', async () => {
+      const mockExecutor = createMockExecutor({
+        success: false,
+        error: 'command not found',
+      });
+
+      const result = await isXcbeautifyAvailable(mockExecutor);
+      expect(result).toBe(false);
+    });
+
+    it('should return false when executor throws an error', async () => {
+      const mockExecutor = createMockExecutor({
+        success: false,
+        shouldThrow: new Error('execution failed'),
+      });
+
+      const result = await isXcbeautifyAvailable(mockExecutor);
+      expect(result).toBe(false);
+    });
+
+    it('should cache the result after first successful call', async () => {
+      let callCount = 0;
+      const trackingExecutor = async () => {
+        callCount++;
+        return { success: true, output: '', process: { pid: 1 } };
+      };
+
+      await isXcbeautifyAvailable(trackingExecutor as any);
+      await isXcbeautifyAvailable(trackingExecutor as any);
+
+      expect(callCount).toBe(1);
+    });
+
+    it('should cache the result after first failed call', async () => {
+      let callCount = 0;
+      const trackingExecutor = async () => {
+        callCount++;
+        return { success: false, output: '', error: 'not found', process: { pid: 1 } };
+      };
+
+      await isXcbeautifyAvailable(trackingExecutor as any);
+      await isXcbeautifyAvailable(trackingExecutor as any);
+
+      expect(callCount).toBe(1);
+    });
+  });
+
+  describe('resetXcbeautifyCache', () => {
+    beforeEach(() => {
+      resetXcbeautifyCache();
+    });
+
+    it('should reset cache allowing fresh availability check', async () => {
+      // First call - returns true
+      const successExecutor = createMockExecutor({ success: true, output: '' });
+      const firstResult = await isXcbeautifyAvailable(successExecutor);
+      expect(firstResult).toBe(true);
+
+      // Reset cache
+      resetXcbeautifyCache();
+
+      // Second call with different executor - should call executor again
+      const failExecutor = createMockExecutor({ success: false, error: 'not found' });
+      const secondResult = await isXcbeautifyAvailable(failExecutor);
+      expect(secondResult).toBe(false);
     });
   });
 });

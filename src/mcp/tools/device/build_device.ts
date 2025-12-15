@@ -36,6 +36,8 @@ const buildDeviceSchema = baseSchema
 
 export type BuildDeviceParams = z.infer<typeof buildDeviceSchema>;
 
+export type XcbeautifyQuietLevel = 0 | 1 | 2;
+
 /**
  * Business logic for building device project or workspace.
  * Exported for direct testing and reuse.
@@ -43,6 +45,7 @@ export type BuildDeviceParams = z.infer<typeof buildDeviceSchema>;
 export async function buildDeviceLogic(
   params: BuildDeviceParams,
   executor: CommandExecutor,
+  xcbeautifyQuietLevel: XcbeautifyQuietLevel = 0,
 ): Promise<ToolResponse> {
   const processedParams = {
     ...params,
@@ -54,6 +57,7 @@ export async function buildDeviceLogic(
     {
       platform: XcodePlatform.iOS,
       logPrefix: 'iOS Device Build',
+      xcbeautify: { quietLevel: xcbeautifyQuietLevel },
     },
     params.preferXcodebuild ?? false,
     'build',
@@ -61,23 +65,36 @@ export async function buildDeviceLogic(
   );
 }
 
-export default {
-  name: 'build_device',
-  description: 'Builds an app for a connected device.',
-  schema: baseSchemaObject.omit({
-    projectPath: true,
-    workspacePath: true,
-    scheme: true,
-    configuration: true,
-  } as const).shape,
-  handler: createSessionAwareTool<BuildDeviceParams>({
-    internalSchema: buildDeviceSchema as unknown as z.ZodType<BuildDeviceParams>,
-    logicFunction: buildDeviceLogic,
-    getExecutor: getDefaultCommandExecutor,
-    requirements: [
-      { allOf: ['scheme'], message: 'scheme is required' },
-      { oneOf: ['projectPath', 'workspacePath'], message: 'Provide a project or workspace' },
-    ],
-    exclusivePairs: [['projectPath', 'workspacePath']],
-  }),
-};
+export function createBuildDeviceToolDefinition(
+  name: string,
+  description: string,
+  xcbeautifyQuietLevel: XcbeautifyQuietLevel,
+) {
+  return {
+    name,
+    description,
+    schema: baseSchemaObject.omit({
+      projectPath: true,
+      workspacePath: true,
+      scheme: true,
+      configuration: true,
+    } as const).shape,
+    handler: createSessionAwareTool<BuildDeviceParams>({
+      internalSchema: buildDeviceSchema as unknown as z.ZodType<BuildDeviceParams>,
+      logicFunction: (params: BuildDeviceParams, executor: CommandExecutor) =>
+        buildDeviceLogic(params, executor, xcbeautifyQuietLevel),
+      getExecutor: getDefaultCommandExecutor,
+      requirements: [
+        { allOf: ['scheme'], message: 'scheme is required' },
+        { oneOf: ['projectPath', 'workspacePath'], message: 'Provide a project or workspace' },
+      ],
+      exclusivePairs: [['projectPath', 'workspacePath']],
+    }),
+  };
+}
+
+export default createBuildDeviceToolDefinition(
+  'build_device',
+  'Builds an app for a connected device.',
+  0,
+);

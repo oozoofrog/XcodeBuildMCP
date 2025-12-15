@@ -32,6 +32,107 @@ import {
 } from './xcodemake.ts';
 import path from 'path';
 
+type BuildOutputMode = 'guided' | 'diagnostics';
+
+function getBuildOutputMode(): BuildOutputMode {
+  const raw = process.env.XCODEBUILDMCP_BUILD_OUTPUT;
+  if (raw === 'diagnostics') return 'diagnostics';
+  return 'guided';
+}
+
+function isTestEnvironment(): boolean {
+  return process.env.VITEST === 'true' || process.env.NODE_ENV === 'test';
+}
+
+function dedupeLines(lines: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    result.push(trimmed);
+  }
+  return result;
+}
+
+function formatDiagnosticsBlocks(
+  warnings: string[],
+  errors: string[],
+): Array<{ type: 'text'; text: string }> {
+  const content: Array<{ type: 'text'; text: string }> = [];
+
+  const pushSection = (title: string, lines: string[]) => {
+    if (lines.length === 0) return;
+    const body = [
+      title,
+      ...lines.map((line) => `- ${line}`),
+    ].join('\n');
+    content.push({ type: 'text', text: body });
+  };
+
+  pushSection(`❌ Errors (${errors.length})`, errors);
+  pushSection(`⚠️ Warnings (${warnings.length})`, warnings);
+
+  return content;
+}
+
+let cachedXcbeautifyAvailable: boolean | undefined;
+
+/**
+ * Reset xcbeautify availability cache (for testing purposes)
+ */
+export function resetXcbeautifyCache(): void {
+  cachedXcbeautifyAvailable = undefined;
+}
+
+export async function isXcbeautifyAvailable(
+  executor: CommandExecutor,
+  execOpts?: CommandExecOptions,
+): Promise<boolean> {
+  if (cachedXcbeautifyAvailable !== undefined) return cachedXcbeautifyAvailable;
+  try {
+    const result = await executor(
+      ['bash', '-lc', 'command -v xcbeautify >/dev/null 2>&1'],
+      'Check xcbeautify',
+      false,
+      execOpts,
+    );
+    cachedXcbeautifyAvailable = result.success;
+    return result.success;
+  } catch {
+    cachedXcbeautifyAvailable = false;
+    return false;
+  }
+}
+
+function shellQuote(arg: string): string {
+  if (!/[\s,"'=$`;&|<>(){}[\]\\*?~]/.test(arg) || /^".*"$/.test(arg)) {
+    return arg;
+  }
+  return `"${arg.replace(/(["\\])/g, '\\$1')}"`;
+}
+
+function buildShellCommand(args: string[]): string {
+  return args.map(shellQuote).join(' ');
+}
+
+export function getXcbeautifyArgs(quietLevel: 0 | 1 | 2): string[] {
+  if (quietLevel === 1) return ['xcbeautify', '-q'];
+  if (quietLevel === 2) return ['xcbeautify', '-qq'];
+  return ['xcbeautify'];
+}
+
+export function getXcbeautifyInstallPrompt(): string {
+  return [
+    '⚠️ xcbeautify가 설치되어 있지 않아 기본 출력 포맷팅을 적용할 수 없습니다.',
+    '설치 방법:',
+    '- Homebrew: brew install xcbeautify',
+    '- 또는: https://github.com/cpisciotta/xcbeautify',
+  ].join('\n');
+}
+
 /**
  * Common function to execute an Xcode build command across platforms
  * @param params Common build parameters
@@ -49,6 +150,10 @@ export async function executeXcodeBuildCommand(
   executor: CommandExecutor,
   execOpts?: CommandExecOptions,
 ): Promise<ToolResponse> {
+  const outputMode = getBuildOutputMode();
+  const shouldUseXcbeautify = !isTestEnvironment();
+  const xcbeautifyQuietLevel: 0 | 1 | 2 = platformOptions.xcbeautify?.quietLevel ?? 0;
+
   // Collect warnings, errors, and stderr messages from the build output
   const buildMessages: { type: 'text'; text: string }[] = [];
   function grepWarningsAndErrors(text: string): { type: 'warning' | 'error'; content: string }[] {
@@ -76,22 +181,28 @@ export async function executeXcodeBuildCommand(
         'info',
         'xcodemake is enabled but preferXcodebuild is set to true. Falling back to xcodebuild.',
       );
-      buildMessages.push({
-        type: 'text',
-        text: '⚠️ incremental build support is enabled but preferXcodebuild is set to true. Falling back to xcodebuild.',
-      });
+      if (outputMode === 'guided') {
+        buildMessages.push({
+          type: 'text',
+          text: '⚠️ incremental build support is enabled but preferXcodebuild is set to true. Falling back to xcodebuild.',
+        });
+      }
     } else if (!xcodemakeAvailableFlag) {
-      buildMessages.push({
-        type: 'text',
-        text: '⚠️ xcodemake is enabled but not available. Falling back to xcodebuild.',
-      });
+      if (outputMode === 'guided') {
+        buildMessages.push({
+          type: 'text',
+          text: '⚠️ xcodemake is enabled but not available. Falling back to xcodebuild.',
+        });
+      }
       log('info', 'xcodemake is enabled but not available. Falling back to xcodebuild.');
     } else {
       log('info', 'xcodemake is enabled and available, using it for incremental builds.');
-      buildMessages.push({
-        type: 'text',
-        text: 'ℹ️ xcodemake is enabled and available, using it for incremental builds.',
-      });
+      if (outputMode === 'guided') {
+        buildMessages.push({
+          type: 'text',
+          text: 'ℹ️ xcodemake is enabled and available, using it for incremental builds.',
+        });
+      }
     }
   }
 
@@ -226,24 +337,59 @@ export async function executeXcodeBuildCommand(
       }
     } else {
       // Use standard xcodebuild
-      result = await executor(command, platformOptions.logPrefix, true, execOpts);
+      const xcbeautifyAvailable =
+        shouldUseXcbeautify && (await isXcbeautifyAvailable(executor, execOpts));
+
+      if (shouldUseXcbeautify && !xcbeautifyAvailable) {
+        const prompt = getXcbeautifyInstallPrompt();
+        if (outputMode === 'guided') {
+          buildMessages.push({ type: 'text', text: prompt });
+        }
+      }
+
+      if (xcbeautifyAvailable) {
+        const xcodebuildCmd = buildShellCommand(command);
+        const xcbeautifyCmd = buildShellCommand(getXcbeautifyArgs(xcbeautifyQuietLevel));
+        const pipeline = `set -o pipefail; ${xcodebuildCmd} 2>&1 | ${xcbeautifyCmd}`;
+        result = await executor(['bash', '-lc', pipeline], platformOptions.logPrefix, false, execOpts);
+      } else {
+        result = await executor(command, platformOptions.logPrefix, true, execOpts);
+      }
     }
 
     // Grep warnings and errors from stdout (build output)
     const warningOrErrorLines = grepWarningsAndErrors(result.output);
-    warningOrErrorLines.forEach(({ type, content }) => {
-      buildMessages.push({
-        type: 'text',
-        text: type === 'warning' ? `⚠️ Warning: ${content}` : `❌ Error: ${content}`,
-      });
-    });
 
-    // Include all stderr lines as errors
-    if (result.error) {
-      result.error.split('\n').forEach((content) => {
-        if (content.trim()) {
-          buildMessages.push({ type: 'text', text: `❌ [stderr] ${content}` });
-        }
+    const warnings = dedupeLines(
+      warningOrErrorLines.filter(({ type }) => type === 'warning').map(({ content }) => content),
+    );
+    const errorsFromStdout = dedupeLines(
+      warningOrErrorLines.filter(({ type }) => type === 'error').map(({ content }) => content),
+    );
+    const errorsFromStderr = dedupeLines(
+      (result.error ?? '')
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => `[stderr] ${line}`),
+    );
+
+    const errors = dedupeLines([...errorsFromStdout, ...errorsFromStderr]);
+
+    if (shouldUseXcbeautify && cachedXcbeautifyAvailable === false) {
+      const prompt = getXcbeautifyInstallPrompt();
+      if (outputMode === 'diagnostics') {
+        warnings.unshift(prompt);
+      }
+    }
+
+    if (outputMode === 'guided') {
+      warnings.forEach((content) => {
+        buildMessages.push({ type: 'text', text: `⚠️ Warning: ${content}` });
+      });
+      errors.forEach((content) => {
+        const text = content.startsWith('[stderr] ') ? `❌ ${content}` : `❌ Error: ${content}`;
+        buildMessages.push({ type: 'text', text });
       });
     }
 
@@ -252,20 +398,33 @@ export async function executeXcodeBuildCommand(
 
       log(
         isMcpError ? 'error' : 'warning',
-        `${platformOptions.logPrefix} ${buildAction} failed: ${result.error}`,
+        `${platformOptions.logPrefix} ${buildAction} failed: ${result.error ?? '(no stderr; see formatted output)'}`,
         { sentry: isMcpError },
       );
-      const errorResponse = createTextResponse(
-        `❌ ${platformOptions.logPrefix} ${buildAction} failed for scheme ${params.scheme}.`,
-        true,
-      );
+      const errorResponse =
+        outputMode === 'diagnostics'
+          ? ({
+              content: [
+                ...formatDiagnosticsBlocks(warnings, errors),
+                {
+                  type: 'text',
+                  text: `❌ ${platformOptions.logPrefix} ${buildAction} failed for scheme ${params.scheme}.`,
+                },
+              ],
+              isError: true,
+            } satisfies ToolResponse)
+          : createTextResponse(
+              `❌ ${platformOptions.logPrefix} ${buildAction} failed for scheme ${params.scheme}.`,
+              true,
+            );
 
-      if (buildMessages.length > 0 && errorResponse.content) {
+      if (outputMode === 'guided' && buildMessages.length > 0 && errorResponse.content) {
         errorResponse.content.unshift(...buildMessages);
       }
 
       // If using xcodemake and build failed but no compiling errors, suggest using xcodebuild
       if (
+        outputMode === 'guided' &&
         warningOrErrorLines.length == 0 &&
         isXcodemakeEnabledFlag &&
         xcodemakeAvailableFlag &&
@@ -323,18 +482,38 @@ Future builds will use the generated Makefile for improved performance.
       }
     }
 
-    const successResponse: ToolResponse = {
-      content: [
-        ...buildMessages,
-        {
-          type: 'text',
-          text: `✅ ${platformOptions.logPrefix} ${buildAction} succeeded for scheme ${params.scheme}.`,
-        },
-      ],
-    };
+    const successResponse: ToolResponse =
+      outputMode === 'diagnostics'
+        ? ({
+            content:
+              warnings.length === 0 && errors.length === 0
+                ? [
+                    {
+                      type: 'text',
+                      text: `✅ ${platformOptions.logPrefix} ${buildAction} succeeded for scheme ${params.scheme} (no warnings/errors).`,
+                    },
+                  ]
+                : [
+                    ...formatDiagnosticsBlocks(warnings, errors),
+                    {
+                      type: 'text',
+                      text: `✅ ${platformOptions.logPrefix} ${buildAction} succeeded for scheme ${params.scheme}.`,
+                    },
+                  ],
+            isError: false,
+          } satisfies ToolResponse)
+        : {
+            content: [
+              ...buildMessages,
+              {
+                type: 'text',
+                text: `✅ ${platformOptions.logPrefix} ${buildAction} succeeded for scheme ${params.scheme}.`,
+              },
+            ],
+          };
 
     // Only add additional info if we have any
-    if (additionalInfo) {
+    if (outputMode === 'guided' && additionalInfo) {
       successResponse.content.push({
         type: 'text',
         text: additionalInfo,

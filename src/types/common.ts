@@ -107,4 +107,14 @@ export interface PlatformBuildOptions {
   useLatestOS?: boolean;
   arch?: string;
   logPrefix: string;
+  /**
+   * If xcbeautify is installed, xcodebuild output is piped through it by default.
+   * quietLevel maps to xcbeautify's verbosity flags:
+   * - 0 (default): normal
+   * - 1: `-q` (quiet)
+   * - 2: `-qq` (errors only)
+   */
+  xcbeautify?: {
+    quietLevel?: 0 | 1 | 2;
+  };
 }

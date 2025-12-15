@@ -65,6 +65,8 @@ const buildMacOSSchema = baseSchema
 
 export type BuildMacOSParams = z.infer<typeof buildMacOSSchema>;
 
+export type XcbeautifyQuietLevel = 0 | 1 | 2;
+
 /**
  * Business logic for building macOS apps from project or workspace with dependency injection.
  * Exported for direct testing and reuse.
@@ -73,6 +75,7 @@ export async function buildMacOSLogic(
   params: BuildMacOSParams,
   executor: CommandExecutor,
   buildUtilsDeps: BuildUtilsDependencies = defaultBuildUtilsDependencies,
+  xcbeautifyQuietLevel: XcbeautifyQuietLevel = 0,
 ): Promise<ToolResponse> {
   log('info', `Starting macOS build for scheme ${params.scheme} (internal)`);
 
@@ -88,6 +91,7 @@ export async function buildMacOSLogic(
       platform: XcodePlatform.macOS,
       arch: params.arch,
       logPrefix: 'macOS Build',
+      xcbeautify: { quietLevel: xcbeautifyQuietLevel },
     },
     processedParams.preferXcodebuild ?? false,
     'build',
@@ -95,18 +99,27 @@ export async function buildMacOSLogic(
   );
 }
 
-export default {
-  name: 'build_macos',
-  description: 'Builds a macOS app.',
-  schema: publicSchemaObject.shape,
-  handler: createSessionAwareTool<BuildMacOSParams>({
-    internalSchema: buildMacOSSchema as unknown as z.ZodType<BuildMacOSParams>,
-    logicFunction: buildMacOSLogic,
-    getExecutor: getDefaultCommandExecutor,
-    requirements: [
-      { allOf: ['scheme'], message: 'scheme is required' },
-      { oneOf: ['projectPath', 'workspacePath'], message: 'Provide a project or workspace' },
-    ],
-    exclusivePairs: [['projectPath', 'workspacePath']],
-  }),
-};
+export function createBuildMacOSToolDefinition(
+  name: string,
+  description: string,
+  xcbeautifyQuietLevel: XcbeautifyQuietLevel,
+) {
+  return {
+    name,
+    description,
+    schema: publicSchemaObject.shape,
+    handler: createSessionAwareTool<BuildMacOSParams>({
+      internalSchema: buildMacOSSchema as unknown as z.ZodType<BuildMacOSParams>,
+      logicFunction: (params: BuildMacOSParams, executor: CommandExecutor) =>
+        buildMacOSLogic(params, executor, defaultBuildUtilsDependencies, xcbeautifyQuietLevel),
+      getExecutor: getDefaultCommandExecutor,
+      requirements: [
+        { allOf: ['scheme'], message: 'scheme is required' },
+        { oneOf: ['projectPath', 'workspacePath'], message: 'Provide a project or workspace' },
+      ],
+      exclusivePairs: [['projectPath', 'workspacePath']],
+    }),
+  };
+}
+
+export default createBuildMacOSToolDefinition('build_macos', 'Builds a macOS app.', 0);

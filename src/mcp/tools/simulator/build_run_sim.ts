@@ -80,11 +80,14 @@ const buildRunSimulatorSchema = baseSchema
 
 export type BuildRunSimulatorParams = z.infer<typeof buildRunSimulatorSchema>;
 
+export type XcbeautifyQuietLevel = 0 | 1 | 2;
+
 // Internal logic for building Simulator apps.
 async function _handleSimulatorBuildLogic(
   params: BuildRunSimulatorParams,
   executor: CommandExecutor,
   executeXcodeBuildCommandFn: typeof executeXcodeBuildCommand = executeXcodeBuildCommand,
+  xcbeautifyQuietLevel: XcbeautifyQuietLevel = 0,
 ): Promise<ToolResponse> {
   const projectType = params.projectPath ? 'project' : 'workspace';
   const filePath = params.projectPath ?? params.workspacePath;
@@ -120,6 +123,7 @@ async function _handleSimulatorBuildLogic(
       simulatorName: params.simulatorName,
       useLatestOS: params.simulatorId ? false : params.useLatestOS,
       logPrefix: 'iOS Simulator Build',
+      xcbeautify: { quietLevel: xcbeautifyQuietLevel },
     },
     params.preferXcodebuild as boolean,
     'build',
@@ -132,6 +136,7 @@ export async function build_run_simLogic(
   params: BuildRunSimulatorParams,
   executor: CommandExecutor,
   executeXcodeBuildCommandFn: typeof executeXcodeBuildCommand = executeXcodeBuildCommand,
+  xcbeautifyQuietLevel: XcbeautifyQuietLevel = 0,
 ): Promise<ToolResponse> {
   const projectType = params.projectPath ? 'project' : 'workspace';
   const filePath = params.projectPath ?? params.workspacePath;
@@ -147,6 +152,7 @@ export async function build_run_simLogic(
       params,
       executor,
       executeXcodeBuildCommandFn,
+      xcbeautifyQuietLevel,
     );
 
     if (buildResult.isError) {
@@ -506,7 +512,8 @@ export default {
   schema: publicSchemaObject.shape,
   handler: createSessionAwareTool<BuildRunSimulatorParams>({
     internalSchema: buildRunSimulatorSchema as unknown as z.ZodType<BuildRunSimulatorParams>,
-    logicFunction: build_run_simLogic,
+    logicFunction: (params: BuildRunSimulatorParams, executor: CommandExecutor) =>
+      build_run_simLogic(params, executor, executeXcodeBuildCommand, 0),
     getExecutor: getDefaultCommandExecutor,
     requirements: [
       { allOf: ['scheme'], message: 'scheme is required' },
@@ -519,3 +526,30 @@ export default {
     ],
   }),
 };
+
+export function createBuildRunSimToolDefinition(
+  name: string,
+  description: string,
+  xcbeautifyQuietLevel: XcbeautifyQuietLevel,
+) {
+  return {
+    name,
+    description,
+    schema: publicSchemaObject.shape,
+    handler: createSessionAwareTool<BuildRunSimulatorParams>({
+      internalSchema: buildRunSimulatorSchema as unknown as z.ZodType<BuildRunSimulatorParams>,
+      logicFunction: (params: BuildRunSimulatorParams, executor: CommandExecutor) =>
+        build_run_simLogic(params, executor, executeXcodeBuildCommand, xcbeautifyQuietLevel),
+      getExecutor: getDefaultCommandExecutor,
+      requirements: [
+        { allOf: ['scheme'], message: 'scheme is required' },
+        { oneOf: ['projectPath', 'workspacePath'], message: 'Provide a project or workspace' },
+        { oneOf: ['simulatorId', 'simulatorName'], message: 'Provide simulatorId or simulatorName' },
+      ],
+      exclusivePairs: [
+        ['projectPath', 'workspacePath'],
+        ['simulatorId', 'simulatorName'],
+      ],
+    }),
+  };
+}

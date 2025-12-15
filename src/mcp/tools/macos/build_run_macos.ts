@@ -56,12 +56,15 @@ const buildRunMacOSSchema = baseSchema
 
 export type BuildRunMacOSParams = z.infer<typeof buildRunMacOSSchema>;
 
+export type XcbeautifyQuietLevel = 0 | 1 | 2;
+
 /**
  * Internal logic for building macOS apps.
  */
 async function _handleMacOSBuildLogic(
   params: BuildRunMacOSParams,
   executor: CommandExecutor,
+  xcbeautifyQuietLevel: XcbeautifyQuietLevel = 0,
 ): Promise<ToolResponse> {
   log('info', `Starting macOS build for scheme ${params.scheme} (internal)`);
 
@@ -74,6 +77,7 @@ async function _handleMacOSBuildLogic(
       platform: XcodePlatform.macOS,
       arch: params.arch,
       logPrefix: 'macOS Build',
+      xcbeautify: { quietLevel: xcbeautifyQuietLevel },
     },
     params.preferXcodebuild ?? false,
     'build',
@@ -143,12 +147,13 @@ async function _getAppPathFromBuildSettings(
 export async function buildRunMacOSLogic(
   params: BuildRunMacOSParams,
   executor: CommandExecutor,
+  xcbeautifyQuietLevel: XcbeautifyQuietLevel = 0,
 ): Promise<ToolResponse> {
   log('info', 'Handling macOS build & run logic...');
 
   try {
     // First, build the app
-    const buildResult = await _handleMacOSBuildLogic(params, executor);
+    const buildResult = await _handleMacOSBuildLogic(params, executor, xcbeautifyQuietLevel);
 
     // 1. Check if the build itself failed
     if (buildResult.isError) {
@@ -213,18 +218,31 @@ export async function buildRunMacOSLogic(
   }
 }
 
-export default {
-  name: 'build_run_macos',
-  description: 'Builds and runs a macOS app.',
-  schema: publicSchemaObject.shape,
-  handler: createSessionAwareTool<BuildRunMacOSParams>({
-    internalSchema: buildRunMacOSSchema as unknown as z.ZodType<BuildRunMacOSParams>,
-    logicFunction: buildRunMacOSLogic,
-    getExecutor: getDefaultCommandExecutor,
-    requirements: [
-      { allOf: ['scheme'], message: 'scheme is required' },
-      { oneOf: ['projectPath', 'workspacePath'], message: 'Provide a project or workspace' },
-    ],
-    exclusivePairs: [['projectPath', 'workspacePath']],
-  }),
-};
+export function createBuildRunMacOSToolDefinition(
+  name: string,
+  description: string,
+  xcbeautifyQuietLevel: XcbeautifyQuietLevel,
+) {
+  return {
+    name,
+    description,
+    schema: publicSchemaObject.shape,
+    handler: createSessionAwareTool<BuildRunMacOSParams>({
+      internalSchema: buildRunMacOSSchema as unknown as z.ZodType<BuildRunMacOSParams>,
+      logicFunction: (params: BuildRunMacOSParams, executor: CommandExecutor) =>
+        buildRunMacOSLogic(params, executor, xcbeautifyQuietLevel),
+      getExecutor: getDefaultCommandExecutor,
+      requirements: [
+        { allOf: ['scheme'], message: 'scheme is required' },
+        { oneOf: ['projectPath', 'workspacePath'], message: 'Provide a project or workspace' },
+      ],
+      exclusivePairs: [['projectPath', 'workspacePath']],
+    }),
+  };
+}
+
+export default createBuildRunMacOSToolDefinition(
+  'build_run_macos',
+  'Builds and runs a macOS app.',
+  0,
+);
