@@ -7,7 +7,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { z } from 'zod';
 import { createMockExecutor, createNoopExecutor } from '../../../../test-utils/mock-executors.ts';
-import buildDevice, { buildDeviceLogic } from '../build_device.ts';
+import buildDevice, { buildDeviceLogic } from '../_build_device.ts';
 import { sessionStore } from '../../../../utils/session-store.ts';
 
 describe('build_device plugin', () => {

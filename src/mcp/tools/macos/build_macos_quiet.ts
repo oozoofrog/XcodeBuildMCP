@@ -1,4 +1,4 @@
-import { createBuildMacOSToolDefinition } from './build_macos.ts';
+import { createBuildMacOSToolDefinition } from './_build_macos.ts';
 
 export default createBuildMacOSToolDefinition(
   'build_macos_quiet',

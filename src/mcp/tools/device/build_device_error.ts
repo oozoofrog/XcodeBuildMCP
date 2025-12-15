@@ -1,4 +1,4 @@
-import { createBuildDeviceToolDefinition } from './build_device.ts';
+import { createBuildDeviceToolDefinition } from './_build_device.ts';
 
 export default createBuildDeviceToolDefinition(
   'build_device_error',

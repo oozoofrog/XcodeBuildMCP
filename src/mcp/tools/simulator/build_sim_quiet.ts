@@ -1,4 +1,4 @@
-import { createBuildSimToolDefinition } from './build_sim.ts';
+import { createBuildSimToolDefinition } from './_build_sim.ts';
 
 export default createBuildSimToolDefinition(
   'build_sim_quiet',

@@ -6,8 +6,8 @@ import { describe, it, expect } from 'vitest';
 
 // Import all re-export tools
 import testMacos from '../test_macos.ts';
-import buildMacos from '../build_macos.ts';
-import buildRunMacos from '../build_run_macos.ts';
+import buildMacos from '../_build_macos.ts';
+import buildRunMacos from '../_build_run_macos.ts';
 import getMacAppPath from '../get_mac_app_path.ts';
 
 describe('macos-project re-exports', () => {

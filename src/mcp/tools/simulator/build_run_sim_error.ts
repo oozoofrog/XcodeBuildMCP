@@ -1,4 +1,4 @@
-import { createBuildRunSimToolDefinition } from './build_run_sim.ts';
+import { createBuildRunSimToolDefinition } from './_build_run_sim.ts';
 
 export default createBuildRunSimToolDefinition(
   'build_run_sim_error',

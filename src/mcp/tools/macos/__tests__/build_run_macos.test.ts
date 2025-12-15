@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { z } from 'zod';
 import { createMockExecutor } from '../../../../test-utils/mock-executors.ts';
 import { sessionStore } from '../../../../utils/session-store.ts';
-import tool, { buildRunMacOSLogic } from '../build_run_macos.ts';
+import tool, { buildRunMacOSLogic } from '../_build_run_macos.ts';
 
 describe('build_run_macos', () => {
   beforeEach(() => {

@@ -4,7 +4,7 @@ import { createMockExecutor } from '../../../../test-utils/mock-executors.ts';
 import { sessionStore } from '../../../../utils/session-store.ts';
 
 // Import the plugin and logic function
-import buildSim, { build_simLogic } from '../build_sim.ts';
+import buildSim, { build_simLogic } from '../_build_sim.ts';
 
 describe('build_sim tool', () => {
   beforeEach(() => {

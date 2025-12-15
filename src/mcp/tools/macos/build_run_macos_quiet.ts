@@ -1,4 +1,4 @@
-import { createBuildRunMacOSToolDefinition } from './build_run_macos.ts';
+import { createBuildRunMacOSToolDefinition } from './_build_run_macos.ts';
 
 export default createBuildRunMacOSToolDefinition(
   'build_run_macos_quiet',
