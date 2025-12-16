@@ -1,69 +1,69 @@
-# Changelog
+# 변경 이력
 
 ## [1.14.0] - 2025-09-22
-- Add video capture tool for simulators
+- 시뮬레이터용 비디오 캡처 도구 추가
 
 ## [1.13.1] - 2025-09-21
-- Add simulator erase content and settings tool
+- 시뮬레이터 콘텐츠 및 설정 초기화 도구 추가
 
 ## [1.12.3] - 2025-08-22
-- Pass environment variables to test runs on device, simulator, and macOS via an optional testRunnerEnv input (auto-prefixed as TEST_RUNNER_).
+- 선택적 testRunnerEnv 입력을 통해 디바이스, 시뮬레이터 및 macOS에서 테스트 실행 시 환경 변수 전달 (TEST_RUNNER_ 접두사 자동 추가)
 
 ## [1.12.2] - 2025-08-21
-### Fixed
-- **Clean tool**: Fixed issue where clean would fail for simulators
+### 수정됨
+- **Clean 도구**: 시뮬레이터에서 clean이 실패하는 문제 수정
 
 ## [1.12.1] - 2025-08-18
-### Improved
-- **Sentry Logging**: No longer logs domain errors to Sentry, now only logs MCP server errors.
+### 개선됨
+- **Sentry 로깅**: 더 이상 도메인 오류를 Sentry에 로깅하지 않으며, MCP 서버 오류만 로깅
 
 ## [1.12.0] - 2025-08-17
-### Added
-- Unify project/workspace and sim id/name tools into a single tools reducing the number of tools from 81 to 59, this helps reduce the client agent's context window size by 27%!
-- **Selective Workflow Loading**: New `XCODEBUILDMCP_ENABLED_WORKFLOWS` environment variable allows loading only specific workflow groups in static mode, reducing context window usage for clients that don't support MCP sampling (Thanks to @codeman9 for their first contribution!)
-- Rename `diagnosics` tool and cli to `doctor`
-- Add Sentry instrumentation to track MCP usage statistics (can be disabled by setting `XCODEBUILDMCP_SENTRY_DISABLED=true`)
-- Add support for MCP setLevel handler to allow clients to control the log level of the MCP server
+### 추가됨
+- 프로젝트/워크스페이스 및 시뮬레이터 id/name 도구를 단일 도구로 통합하여 도구 수를 81개에서 59개로 줄임, 클라이언트 에이전트의 컨텍스트 윈도우 크기를 27% 감소시킴!
+- **선택적 워크플로우 로딩**: MCP 샘플링을 지원하지 않는 클라이언트를 위해 정적 모드에서 특정 워크플로우 그룹만 로드할 수 있는 새로운 `XCODEBUILDMCP_ENABLED_WORKFLOWS` 환경 변수 추가 (@codeman9의 첫 번째 기여에 감사!)
+- `diagnosics` 도구 및 CLI 이름을 `doctor`로 변경
+- MCP 사용 통계를 추적하기 위한 Sentry 계측 추가 (`XCODEBUILDMCP_SENTRY_DISABLED=true` 설정으로 비활성화 가능)
+- MCP 서버의 로그 레벨을 클라이언트가 제어할 수 있도록 MCP setLevel 핸들러 지원 추가
 
 ## [v1.11.2] - 2025-08-08
-- Fixed "registerTools is not a function" errors during package upgrades
+- 패키지 업그레이드 중 "registerTools is not a function" 오류 수정
 
 ## [v1.11.1] - 2025-08-07
-- Improved tool discovery to be more accurate and context-aware
+- 더 정확하고 컨텍스트 인식 가능하도록 도구 검색 개선
 
 ## [v1.11.0] - 2025-08-07
-- Major refactor/rewrite to improve code quality and maintainability in preparation for future development
-- Added support for dynamic tools (VSCode only for now)
-- Added support for MCP Resources (devices, simulators, environment info)
-- Workaround for https://github.com/cameroncooke/XcodeBuildMCP/issues/66 and https://github.com/anthropics/claude-code/issues/1804 issues where Claude Code would only see the first text content from tool responses
+- 향후 개발을 위한 코드 품질 및 유지보수성 향상을 위한 대규모 리팩토링/재작성
+- 동적 도구 지원 추가 (현재 VSCode만 지원)
+- MCP 리소스 지원 추가 (디바이스, 시뮬레이터, 환경 정보)
+- Claude Code가 도구 응답에서 첫 번째 텍스트 콘텐츠만 표시하는 https://github.com/cameroncooke/XcodeBuildMCP/issues/66 및 https://github.com/anthropics/claude-code/issues/1804 이슈에 대한 해결책 적용
 
 ## [v1.10.0] - 2025-06-10
-### Added
-- **App Lifecycle Management**: New tools for stopping running applications
-  - `stop_app_device`: Stop apps running on physical Apple devices (iPhone, iPad, Apple Watch, Apple TV, Apple Vision Pro)
-  - `stop_app_sim`: Stop apps running on iOS/watchOS/tvOS/visionOS simulators
-  - `stop_mac_app`: Stop macOS applications by name or process ID
-- **Enhanced Launch Tools**: Device launch tools now return process IDs for better app management
-- **Bundled AXe Distribution**: AXe binary and frameworks now included in npm package for zero-setup UI automation
+### 추가됨
+- **앱 라이프사이클 관리**: 실행 중인 애플리케이션을 중지하는 새로운 도구
+  - `stop_app_device`: 물리적 Apple 디바이스(iPhone, iPad, Apple Watch, Apple TV, Apple Vision Pro)에서 실행 중인 앱 중지
+  - `stop_app_sim`: iOS/watchOS/tvOS/visionOS 시뮬레이터에서 실행 중인 앱 중지
+  - `stop_mac_app`: 이름 또는 프로세스 ID로 macOS 애플리케이션 중지
+- **향상된 실행 도구**: 디바이스 실행 도구가 이제 더 나은 앱 관리를 위해 프로세스 ID 반환
+- **번들된 AXe 배포**: 설정 없이 UI 자동화를 위해 AXe 바이너리 및 프레임워크가 npm 패키지에 포함됨
 
-### Fixed
-- **WiFi Device Detection**: Improved detection of Apple devices connected over WiFi networks
-- **Device Connectivity**: Better handling of paired devices with different connection states
+### 수정됨
+- **WiFi 디바이스 감지**: WiFi 네트워크를 통해 연결된 Apple 디바이스 감지 개선
+- **디바이스 연결성**: 서로 다른 연결 상태의 페어링된 디바이스 처리 개선
 
-### Improved
-- **Simplified Installation**: No separate AXe installation required - everything works out of the box
+### 개선됨
+- **간소화된 설치**: 별도의 AXe 설치가 필요 없음 - 모든 것이 바로 작동
 
 ## [v1.9.0] - 2025-06-09
-- Added support for hardware devices over USB and Wi-Fi
-- New tools for Apple device deployment:
+- USB 및 Wi-Fi를 통한 하드웨어 디바이스 지원 추가
+- Apple 디바이스 배포를 위한 새로운 도구:
   - `install_app_device`
   - `launch_app_device`
-- Updated all simulator and device tools to be platform-agnostic, supporting all Apple platforms (iOS, iPadOS, watchOS, tvOS, visionOS)
-- Changed `get_ios_bundle_id` to `get_app_bundle_id` with support for all Apple platforms
+- 모든 Apple 플랫폼(iOS, iPadOS, watchOS, tvOS, visionOS)을 지원하도록 모든 시뮬레이터 및 디바이스 도구를 플랫폼 독립적으로 업데이트
+- `get_ios_bundle_id`를 모든 Apple 플랫폼을 지원하는 `get_app_bundle_id`로 변경
 
 ## [v1.8.0] - 2025-06-07
-- Added support for running tests on macOS, iOS simulators, and iOS devices
-- New tools for testing:
+- macOS, iOS 시뮬레이터 및 iOS 디바이스에서 테스트 실행 지원 추가
+- 테스트를 위한 새로운 도구:
   - `test_macos_workspace`
   - `test_macos_project`
   - `test_ios_simulator_name_workspace`
@@ -74,8 +74,8 @@
   - `test_ios_device_project`
 
 ## [v1.7.0] - 2025-06-04
-- Added support for Swift Package Manager (SPM)
-- New tools for Swift Package Manager:
+- Swift Package Manager (SPM) 지원 추가
+- Swift Package Manager를 위한 새로운 도구:
   - `swift_package_build`
   - `swift_package_clean`
   - `swift_package_test`
@@ -84,100 +84,100 @@
   - `swift_package_stop`
 
 ## [v1.6.1] - 2025-06-03
-- Improve UI tool hints
+- UI 도구 힌트 개선
 
 ## [v1.6.0] - 2025-06-03
-- Moved project templates to external GitHub repositories for independent versioning
-- Added support for downloading templates from GitHub releases
-- Added local template override support via environment variables
-- Added `scaffold_ios_project` and `scaffold_macos_project` tools for creating new projects
-- Centralized template version management in package.json for easier updates
+- 독립적인 버전 관리를 위해 프로젝트 템플릿을 외부 GitHub 저장소로 이동
+- GitHub 릴리스에서 템플릿 다운로드 지원 추가
+- 환경 변수를 통한 로컬 템플릿 오버라이드 지원 추가
+- 새 프로젝트 생성을 위한 `scaffold_ios_project` 및 `scaffold_macos_project` 도구 추가
+- 손쉬운 업데이트를 위해 package.json에 템플릿 버전 관리 중앙화
 
 ## [v1.5.0] - 2025-06-01
-- UI automation is no longer in beta!
-- Added support for AXe UI automation
-- Revised default installation instructions to prefer npx instead of mise
+- UI 자동화가 더 이상 베타가 아님!
+- AXe UI 자동화 지원 추가
+- 기본 설치 지침을 mise 대신 npx 선호하도록 수정
 
 ## [v1.4.0] - 2025-05-11
-- Merge the incremental build beta branch into main
-- Add preferXcodebuild argument to build tools with improved error handling allowing the agent to force the use of xcodebuild over xcodemake for complex projects. It also adds a hint when incremental builds fail due to non-compiler errors, enabling the agent to automatically switch to xcodebuild for a recovery build attempt, improving reliability.
+- 증분 빌드 베타 브랜치를 main에 병합
+- 에이전트가 복잡한 프로젝트에 대해 xcodemake 대신 xcodebuild 사용을 강제할 수 있도록 개선된 오류 처리와 함께 빌드 도구에 preferXcodebuild 인자 추가. 또한 비컴파일러 오류로 인해 증분 빌드가 실패할 때 힌트를 추가하여 에이전트가 자동으로 복구 빌드 시도를 위해 xcodebuild로 전환할 수 있도록 하여 신뢰성 향상
 
 ## [v1.3.7] - 2025-05-08
-- Fix Claude Code issue due to long tool names
+- 긴 도구 이름으로 인한 Claude Code 이슈 수정
 
 ## [v1.4.0-beta.3] - 2025-05-07
-- Fixed issue where incremental builds would only work for "Debug" build configurations
--
+- "Debug" 빌드 구성에서만 증분 빌드가 작동하던 문제 수정
+
 ## [v1.4.0-beta.2] - 2025-05-07
-- Same as beta 1 but has the latest features from the main release channel
+- beta 1과 동일하지만 main 릴리스 채널의 최신 기능 포함
 
 ## [v1.4.0-beta.1] - 2025-05-05
-- Added experimental support for incremental builds (requires opt-in)
+- 증분 빌드에 대한 실험적 지원 추가 (옵트인 필요)
 
 ## [v1.3.6] - 2025-05-07
-- Added support for enabling/disabling tools via environment variables
+- 환경 변수를 통한 도구 활성화/비활성화 지원 추가
 
 ## [v1.3.5] - 2025-05-05
-- Fixed the text input UI automation tool
-- Improve the UI automation tool hints to reduce agent tool call errors
-- Improved the project discovery tool to reduce agent tool call errors
-- Added instructions for installing idb client manually
+- 텍스트 입력 UI 자동화 도구 수정
+- 에이전트 도구 호출 오류를 줄이기 위해 UI 자동화 도구 힌트 개선
+- 에이전트 도구 호출 오류를 줄이기 위해 프로젝트 검색 도구 개선
+- idb 클라이언트 수동 설치 지침 추가
 
 ## [v1.3.4] - 2025-05-04
-- Improved Sentry integration
+- Sentry 통합 개선
 
 ## [v1.3.3] - 2025-05-04
-- Added Sentry opt-out functionality
+- Sentry 옵트아웃 기능 추가
 
 ## [v1.3.1] - 2025-05-03
-- Added Sentry integration for error reporting
+- 오류 보고를 위한 Sentry 통합 추가
 
 ## [v1.3.0] - 2025-04-28
 
-- Added support for interacting with the simulator (tap, swipe etc.)
-- Added support for capturing simulator screenshots
+- 시뮬레이터와 상호작용(탭, 스와이프 등) 지원 추가
+- 시뮬레이터 스크린샷 캡처 지원 추가
 
-Please note that the UI automation features are an early preview and currently in beta your mileage may vary.
+UI 자동화 기능은 초기 프리뷰이며 현재 베타 버전으로 결과가 다를 수 있습니다.
 
 ## [v1.2.4] - 2025-04-24
-- Improved xcodebuild reporting of warnings and errors in tool response
-- Refactor build utils and remove redundant code
+- 도구 응답에서 xcodebuild 경고 및 오류 보고 개선
+- 빌드 유틸리티 리팩토링 및 중복 코드 제거
 
 ## [v1.2.3] - 2025-04-23
-- Added support for skipping macro validation
+- 매크로 검증 건너뛰기 지원 추가
 
 ## [v1.2.2] - 2025-04-23
-- Improved log readability with version information for easier debugging
-- Enhanced overall stability and performance
+- 더 쉬운 디버깅을 위해 버전 정보가 포함된 로그 가독성 개선
+- 전반적인 안정성 및 성능 향상
 
 ## [v1.2.1] - 2025-04-23
-- General stability improvements and bug fixes
+- 일반 안정성 개선 및 버그 수정
 
 ## [v1.2.0] - 2025-04-14
-### Added
-- New simulator log capture feature: Easily view and debug your app's logs while running in the simulator
-- Automatic project discovery: XcodeBuildMCP now finds your Xcode projects and workspaces automatically
-- Support for both Intel and Apple Silicon Macs in macOS builds
+### 추가됨
+- 새로운 시뮬레이터 로그 캡처 기능: 시뮬레이터에서 실행 중인 앱의 로그를 쉽게 보고 디버그
+- 자동 프로젝트 검색: XcodeBuildMCP가 이제 Xcode 프로젝트 및 워크스페이스를 자동으로 찾음
+- macOS 빌드에서 Intel 및 Apple Silicon Mac 모두 지원
 
-### Improved
-- Cleaner, more readable build output with better error messages
-- Faster build times and more reliable build process
-- Enhanced documentation with clearer usage examples
+### 개선됨
+- 더 나은 오류 메시지와 함께 깨끗하고 읽기 쉬운 빌드 출력
+- 더 빠른 빌드 시간과 더 신뢰할 수 있는 빌드 프로세스
+- 더 명확한 사용 예시와 함께 향상된 문서
 
 ## [v1.1.0] - 2025-04-05
-### Added
-- Real-time build progress reporting
-- Separate tools for iOS and macOS builds
-- Better workspace and project support
+### 추가됨
+- 실시간 빌드 진행 보고
+- iOS 및 macOS 빌드를 위한 별도 도구
+- 더 나은 워크스페이스 및 프로젝트 지원
 
-### Improved
-- Simplified build commands with better parameter handling
-- More reliable clean operations for both projects and workspaces
+### 개선됨
+- 더 나은 매개변수 처리로 간소화된 빌드 명령
+- 프로젝트 및 워크스페이스 모두에 대한 더 신뢰할 수 있는 정리 작업
 
 ## [v1.0.2] - 2025-04-02
-- Improved documentation with better examples and clearer instructions
-- Easier version tracking for compatibility checks
+- 더 나은 예시와 더 명확한 지침으로 개선된 문서
+- 호환성 확인을 위한 더 쉬운 버전 추적
 
 ## [v1.0.1] - 2025-04-02
-- Initial release of XcodeBuildMCP
-- Basic support for building iOS and macOS applications
+- XcodeBuildMCP 최초 릴리스
+- iOS 및 macOS 애플리케이션 빌드를 위한 기본 지원
